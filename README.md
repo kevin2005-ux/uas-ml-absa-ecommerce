@@ -8,8 +8,7 @@
 
 | Nama | NIM | Program Studi |
 |-------|-----------|-----------------|
-| Davin Rafael Suryatmoko | 244311007 | Teknologi Rekayasa Perangkat Lunak |
-| Julyo Firnanda  | 244311016 | Teknologi Rekayasa Perangkat Lunak |
+| Anggi Wahyu Saputra  | 244311004 | Teknologi Rekayasa Perangkat Lunak |
 | Kevin Rafael Suryatmoko | 244311017 | Teknologi Rekayasa Perangkat Lunak |
 
 
