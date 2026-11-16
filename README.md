@@ -126,27 +126,25 @@ Untuk dataset berupa teks (NLP), arsitektur RNN seperti LSTM dipilih karena *ind
 ## 4. DATA UNDERSTANDING  **[L]**
 ### 4.1 Informasi Dataset
 **Sumber Dataset:**  
-[Sebutkan sumber: Kaggle, UCI ML Repository, atau sumber lain dengan URL]
+[Sebutkan sumber: Hugging Face Datasets – AIbnuHibban/e-commerce-sentiment-bahasa-indonesia]
 
 **Deskripsi Dataset:**
-- Jumlah baris (rows): [angka]
-- Jumlah kolom (columns/features): [angka]
-- Tipe data: [Tabular / Image / Text / Time Series / Audio / Video]
-- Ukuran dataset: [MB/GB]
-- Format file: [CSV / JSON / Images / TXT / etc.]
+- Jumlah baris (rows): [21.840 baris data ulasan]
+- Jumlah kolom (columns/features): [4 kolom (comment, sentiment, category, rating)]
+- Tipe data: [Text & Tabular]
+- Ukuran dataset: [2.5 MB]
+- Format file: [JSON (atau Parquet hasil konversi otomatis Hugging Face, dapat diekspor ke CSV)]
 
 ### 4.2 Deskripsi Fitur
 Jelaskan setiap fitur/kolom yang ada dalam dataset.
 **Contoh tabel:**
 | Nama Fitur | Tipe Data | Deskripsi | Contoh Nilai |
 |------------|-----------|-----------|--------------|
-| id | Integer | ID unik data | 1, 2, 3 |
-| age | Integer | Usia (tahun) | 25, 30, 45 |
-| income | Float | Pendapatan (juta) | 5.5, 10.2 |
-| category | Categorical | Kategori produk | A, B, C |
-| text | String | Teks ulasan | "Produk bagus..." |
-| image | Image | Citra 224x224 RGB | Array 224x224x3 |
-| label | Categorical | Label target | 0, 1 atau "positif", "negatif" |
+| comment | String (Text) | Teks komentar atau ulasan asli dari pembeli mengenai produk maupun layanan e-commerce (panjang berkisar antara 3 hingga 78 karakter/kata). | "Wah mantap banget nih ditipu! Terima kasih seller 😊" |
+| sentiment | Categorical (String) | Label target klasifikasi polaritas sentimen yang terdiri dari 3 kelas utama (positive, neutral, negative). | negative, positive, neutral |
+| category | Categorical (String) | Kategori atau konteks spesifik dari ulasan yang mencakup 12 nilai unik (termasuk kategori khusus seperti sarcasm atau aspek ulasan tertentu). | sarcasm |
+| rating | Integer (int64) | Skor penilaian bintang yang diberikan oleh pelanggan dengan skala 1 hingga 5. | 1, 4, 5 |
+
 
 **[Buat tabel deskripsi fitur Anda di sini]**
 
@@ -154,13 +152,13 @@ Jelaskan setiap fitur/kolom yang ada dalam dataset.
 
 Jelaskan kondisi dan permasalahan data:
 
-- **Missing Values:** [Ada/Tidak, berapa persen?]
-- **Duplicate Data:** [Ada/Tidak, berapa banyak?]
-- **Outliers:** [Ada/Tidak, pada fitur apa?]
-- **Imbalanced Data:** [Ada/Tidak, rasio kelas?]
-- **Noise:** [Jelaskan jika ada]
-- **Data Quality Issues:** [Jelaskan jika ada masalah lain]
-- **Asumsi Data (i.i.d., distribusi train-test, potensi data leakage):** [Jelaskan]
+- **Missing Values:** [Tidak ditemukan missing values secara eksplisit pada pratinjau awal, namun tetap akan dilakukan pengecekan menyeluruh menggunakan fungsi .isnull().sum() pada tahap preprocessing untuk memastikan seluruh baris memiliki pasangan teks dan label yang lengkap.]
+- **Duplicate Data:** [Perlu dilakukan pemeriksaan duplikasi teks pada kolom comment menggunakan .duplicated() guna memastikan tidak ada ulasan berulang yang dapat memicu bias pada proses pelatihan model.]
+- **Outliers:** [Tidak terdapat outlier numerik yang ekstrem karena kolom rating memiliki batas rentang tetap (1–5). Pada fitur teks (comment), distribusi panjang teks berada dalam rentang normal yang wajar (3 hingga 78 unit panjang).]
+- **Imbalanced Data:** [Berdasarkan grafik distribusi mini pada kolom sentiment, proporsi ketiga kelas (positive, neutral, negative) terlihat cukup seimbang (balanced). Namun pada fitur rating, distribusi sedikit condong (skewed) pada skor ekstrem (bintang 1, 4, dan 5) dibandingkan skor tengah (bintang 2 dan 3).]
+- **Noise:** [Dataset ini secara spesifik memuat ulasan berkategori sarkasme (sarcasm)—seperti kalimat "Bagus sekali, barang rusak semua! Top markotop!" yang memiliki makna negatif meskipun menggunakan kata-kata positif. Selain itu, terdapat penggunaan bahasa gaul/informal, singkatan ("ga"), serta emoji ("😊", "🙏") yang menjadi tantangan utama dalam ekstraksi fitur berbasis frekuensi kata seperti TF-IDF.]
+- **Data Quality Issues:** [Diperlukan tahapan Text Preprocessing yang hati-hati (seperti normalisasi kata tidak baku dan penanganan tanda baca) tanpa menghilangkan konteks kata kunci yang menjadi penanda aspek maupun kalimat sarkasme.]
+- **Asumsi Data (i.i.d., distribusi train-test, potensi data leakage):** [Data diasumsikan independen dan identik terdistribusi (i.i.d.). Karena dataset awal hanya menyediakan satu partisi (train: 21.8k rows), pembagian data akan dilakukan menggunakan metode Stratified Train-Test Split (rasio 80:20) untuk menjaga proporsi kelas sentimen dan kategori sarkasme tetap seimbang di kedua set, serta memastikan proses fitting TF-IDF Vectorizer hanya dilakukan pada data latih (train set) guna mencegah kebocoran data (data leakage).]
 
 ### 4.4 Exploratory Data Analysis (EDA) - (**OPSIONAL**)
 
