@@ -211,11 +211,11 @@ Bagian ini menjelaskan **semua** proses transformasi dan preprocessing data yang
 
 **Langkah-langkah data cleaning yang dilakukan:**
 * **Dropping Unused Columns:** 
-  * Berdasarkan EDA, fitur `category` bawaan memiliki 17.000 (77,84%) baris bernilai `None` (tidak terklasifikasi) dan format kategori sisanya (seperti 'sarcasm', 'typos_informal') tidak relevan dengan 3 aspek utama yang kita butuhkan.
+  * Fitur `category` bawaan memiliki 17.000 (77,84%) baris bernilai `None` (tidak terklasifikasi) dan format kategori sisanya (seperti 'sarcasm', 'typos_informal') tidak relevan dengan 3 aspek utama yang kita butuhkan.
   * **Strategi:** Menghapus (*drop*) kolom `category` sepenuhnya dari dataset.
   * **Alasan:** Kolom ini sama sekali tidak digunakan sebagai fitur maupun target dalam tahapan pemodelan klasifikasi sentimen berbasis aspek pada proyek ini. Mempertahankannya hanya akan membebani komputasi tanpa memberikan nilai tambah pada model.
 * **Removing Duplicates:**
-  * Berdasarkan EDA, terdapat 14.815 baris (67,83%) teks ulasan ganda pada kolom `comment`.
+  * Terdapat 14.815 baris (67,83%) teks ulasan ganda pada kolom `comment`.
   * **Strategi:** Menghapus baris duplikat secara paksa menggunakan fungsi `drop_duplicates(subset=['comment'])` *sebelum* tahap pembagian data.
   * **Alasan:** Sangat krusial untuk mencegah model mempelajari ulasan *spam* secara berulang dan menghindari kebocoran data (*data leakage*) antara *train set* dan *test set*.
 * **Handling Noise (Short Texts):**
