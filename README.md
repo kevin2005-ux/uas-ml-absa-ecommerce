@@ -200,86 +200,96 @@ Jelaskan kondisi dan permasalahan data:
 
 ## 5. DATA PREPARATION [L]
 
-Bagian ini menjelaskan **semua** proses transformasi dan preprocessing data yang dilakukan untuk mempersiapkan teks ulasan e-commerce sebelum masuk ke tahapan pemodelan.
+Bagian ini menjelaskan **semua** proses transformasi dan preprocessing data yang dilakukan pada dataset ulasan produk fesyen e-commerce (`jareedhnnn/shopee-fashion-reviews-indonesian`, berkas `dataset_labeled_v6.xlsx`) sebelum masuk ke tahapan pemodelan *Multi-Output Aspect-Based Sentiment Analysis* (ABSA) untuk 6 aspek sekaligus.
 
 ### 5.1 Data Cleaning
 
 **Aktivitas:**
-- Handling missing values / Dropping columns
+- Selecting main labeled dataset & dropping unused columns
+- Handling missing values
 - Removing duplicates
 - Handling outliers & Noise
 
 **Langkah-langkah data cleaning yang dilakukan:**
-* **Dropping Unused Columns:** 
-  * Fitur `category` bawaan memiliki 17.000 (77,84%) baris bernilai `None` (tidak terklasifikasi) dan format kategori sisanya (seperti 'sarcasm', 'typos_informal') tidak relevan dengan 3 aspek utama yang kita butuhkan.
-  * **Strategi:** Menghapus (*drop*) kolom `category` sepenuhnya dari dataset.
-  * **Alasan:** Kolom ini sama sekali tidak digunakan sebagai fitur maupun target dalam tahapan pemodelan klasifikasi sentimen berbasis aspek pada proyek ini. Mempertahankannya hanya akan membebani komputasi tanpa memberikan nilai tambah pada model.
-* **Removing Duplicates:**
-  * Terdapat 14.815 baris (67,83%) teks ulasan ganda pada kolom `comment`.
-  * **Strategi:** Menghapus baris duplikat secara paksa menggunakan fungsi `drop_duplicates(subset=['comment'])` *sebelum* tahap pembagian data.
-  * **Alasan:** Sangat krusial untuk mencegah model mempelajari ulasan *spam* secara berulang dan menghindari kebocoran data (*data leakage*) antara *train set* dan *test set*.
-* **Handling Noise (Short Texts):**
-  * Terdapat 7 ulasan yang terlalu pendek (kurang dari 5 karakter).
-  * **Strategi:** Memfilter dan membuang baris yang panjang karakternya kurang dari 5 huruf (`char_length < 5`).
-  * **Alasan:** Komentar yang terlalu singkat umumnya minim makna kontekstual dan dapat memicu bias pada saat ekstraksi bobot kata.
+- **Dataset Selection & Dropping Unused Columns:** 
+  - Repositori dataset Kaggle memiliki beberapa berkas terpisah (`DATASET_dengan_Kategori (1).xlsx` untuk kategori umum dan `gold_anotasi_manual.csv` yang hanya berisi 349 sampel anotasi parsial), sehingga dipilih berkas utama berlabel lengkap yakni **`dataset_labeled_v6.xlsx`** (6.158 baris).
+  - **Strategi:** Mempertahankan hanya kolom teks ulasan (`ulasan`) dan 6 kolom target sentimen aspek (`aspek_kualitas`, `aspek_bahan`, `aspek_ukuran`, `aspek_desain`, `aspek_warna`, `aspek_kenyamanan`), serta membuang kolom lain yang tidak relevan.
+  - **Alasan:** Memastikan proses pelatihan berfokus sepenuhnya pada hubungan teks ulasan terhadap keenam aspek produk fesyen tanpa membebani komputasi dengan fitur yang tidak digunakan.
+- **Handling Missing Values:**
+  - Memeriksa keberadaan nilai kosong (`NaN`) pada kolom teks ulasan maupun keenam kolom target aspek.
+  - **Strategi:** Menghapus baris yang memiliki nilai kosong pada salah satu kolom teks atau target aspek menggunakan fungsi `dropna(subset=[text_col] + ASPECT_COLS)`.
+  - **Alasan:** Pemodelan klasifikasi *multi-output* mewajibkan setiap sampel ulasan memiliki label lengkap pada seluruh 6 aspek agar perhitungan *loss* berjalan valid.
+- **Removing Duplicates:**
+  - Menghapus ulasan ganda yang identik pada kolom teks ulasan.
+  - **Strategi:** Menghapus baris duplikat secara tegas menggunakan fungsi `drop_duplicates(subset=[text_col])` *sebelum* tahap pembagian data.
+  - **Alasan:** Sangat krusial untuk mencegah model menghafal ulasan *spam* secara berulang dan menghindari kebocoran data (*data leakage*) antara *train set*, *validation set*, dan *test set*.
+- **Handling Noise (Short Texts & Empty Strings):**
+  - Menyaring ulasan yang terlalu singkat maupun yang menjadi string kosong setelah pembersihan simbol.
+  - **Strategi:** Memfilter dan membuang baris yang panjang karakternya kurang dari 5 huruf (`char_length < 5`) serta teks kosong pasca-pembersihan.
+  - **Alasan:** Komentar yang terlalu singkat umumnya tidak memuat informasi aspek maupun polaritas sentimen yang bermakna dan dapat memicu *noise* pada bobot kosakata.
 
 ### 5.2 Feature Engineering
 
 **Aktivitas:**
-- Creating new features (Pseudo-Labeling)
+- Multi-target aspect formulation (6 aspect sentiment columns)
 - Feature extraction
 
 **Langkah-langkah feature engineering yang dilakukan:**
-* **Creating New Features (Aspect Pseudo-Labeling):** 
-  * Karena kolom `category` asli tidak digunakan dan telah dihapus, dibuatlah kolom/fitur baru bernama `aspek`.
-  * Pembuatannya menggunakan *Rule-Based Classification* (Kamus Kata). Teks yang mengandung kata "kurir", "kirim", atau "paket" dilabeli **"Pengiriman"**. Teks yang memuat "admin", "respon", atau "pelayanan" dilabeli **"Layanan Pelanggan"**. Sisanya secara *default* dilabeli **"Produk"**. Hal ini memastikan dataset benar-benar berfokus pada 3 aspek bisnis UMKM yang diangkat.
-* **Feature Extraction (TF-IDF):** 
-  * Mengekstrak teks ulasan menjadi bobot matriks numerik menggunakan *Term Frequency-Inverse Document Frequency* (TF-IDF) dengan batasan 5.000 fitur (`max_features=5000`). Matriks ini akan menjadi *input* utama bagi model Logistic Regression dan LightGBM.
-* **Feature Extraction (Word Embedding):** 
-  * Khusus untuk arsitektur Deep Learning (LSTM), ekstraksi fitur menggunakan *Layer Embedding* untuk mewakili kata sebagai matriks padat (*dense vector*). Tujuannya agar urutan dan konteks kalimat bahasa Indonesia dapat dipertahankan.
+- **Multi-Target Aspect Formulation (6 Aspek Produk Fesyen):** 
+  - Berbeda dengan *rule-based pseudo-labeling*, dataset ini telah dilengkapi anotasi sentimen eksplisit (`positif`, `negatif`, `netral`) untuk **6 aspek spesifik**:
+    - `aspek_kualitas`: 1.068 Positif | 180 Negatif | 4.910 Netral
+    - `aspek_bahan`: 1.823 Positif | 175 Negatif | 4.160 Netral
+    - `aspek_ukuran`: 571 Positif | 276 Negatif | 5.311 Netral
+    - `aspek_desain`: 2.010 Positif | 63 Negatif | 4.085 Netral
+    - `aspek_warna`: 2.316 Positif | 156 Negatif | 3.686 Netral
+    - `aspek_kenyamanan`: 2.353 Positif | 78 Negatif | 3.727 Netral
+  - Keenam kolom ini diformulasikan sebagai target *Multi-Output Classification* sehingga satu ulasan diprediksi polaritasnya pada seluruh aspek secara serentak.
+- **Feature Extraction (TF-IDF Unigram & Bigram):** 
+  - Mengekstrak teks ulasan menjadi matriks bobot numerik menggunakan `TfidfVectorizer(max_features=5000, ngram_range=(1, 2))`. Penggunaan *unigram* dan *bigram* `(1, 2)` bertujuan menangkap frasa negasi dua kata (seperti *"tidak luntur"*, *"tidak panas"*, atau *"kurang rapi"*) sebagai *input* utama bagi Baseline Logistic Regression dan LightGBM (`ClassifierChain`).
+- **Feature Extraction (Contextual Subword Embedding):** 
+  - Khusus untuk arsitektur Deep Learning (**Multi-Head IndoBERT** `indobert-base-p1`), ekstraksi fitur menggunakan representasi *dense vector* kontekstual berdimensi 768. Tujuannya agar urutan kata dan struktur kalimat kontras antar-aspek (misalnya *"warna cantik tapi bahan tipis"*) dapat dipertahankan.
 
 ### 5.3 Data Transformation
 
 **Untuk Data Text:**
-- **Lowercasing:** Mengonversi seluruh teks ulasan menjadi huruf kecil agar ragam format kapitalisasi (seperti "Bagus", "BAGUS", "bagus") dianggap sebagai satu entitas kata yang identik.
-- **Removing punctuation/numbers:** Menghapus angka (terdapat 1,2% data berangka) dan tanda baca/emoji menggunakan Regular Expression (`re.sub(r'[^a-z\s]', '', teks)`) untuk mengurangi variasi *noise* pada token kata.
-- **Removing stopwords:** Menggunakan *library* Sastrawi untuk membuang kata hubung bahasa Indonesia (seperti "yang", "dan", "di") agar model bisa berfokus pada kata-kata yang memuat polaritas sentimen saja.
-- **Stemming:** Menggunakan *library* Sastrawi untuk mengubah kata berimbuhan kembali ke bentuk kata dasarnya (misal: "pengiriman" menjadi "kirim", "merusak" menjadi "rusak") demi meminimalkan kepadatan matriks fitur (*sparsity*).
-- **Tokenization & Padding sequences:** Khusus untuk persiapan data masuk ke model LSTM, untaian kalimat diubah menjadi token angka numerik dan diseragamkan panjang maksimumnya (*padding*).
+- **Lowercasing:** Mengonversi seluruh teks ulasan menjadi huruf kecil agar variasi kapitalisasi (seperti "Bagus", "BAGUS", "bagus") dianggap sebagai satu entitas token yang identik.
+- **Removing punctuation/numbers:** Menghapus angka, tanda baca, dan emoji menggunakan Regular Expression (`re.sub(r'[^a-z\s]', ' ', teks)`) serta menormalisasi spasi berlebih untuk mengurangi variasi *noise* pada token kata.
+- **Stopwords & Stemming (Terkendali):** Disediakan melalui pustaka `Sastrawi`, namun pada konfigurasi utama dipertahankan tanpa penghapusan *stopword* maupun *stemming* agresif agar kata penentu negasi dan polaritas (seperti *"tidak"*, *"nggak"*, *"kurang"*, *"bukan"*) tetap terjaga utuh.
+- **Tokenization & Padding sequences:** Khusus untuk persiapan data masuk ke model Deep Learning (IndoBERT / BiLSTM), untaian kalimat diubah menjadi token indeks numerik (`input_ids`) beserta `attention_mask` dan diseragamkan panjang maksimumnya (*padding*).
 
 **Untuk Data Tabular:**
-- **Encoding (Label Encoding):** Mengubah variabel target, yakni `sentiment` (positif, negatif, netral) dan target `aspek`, menjadi indeks bilangan bulat (0, 1, 2) menggunakan `LabelEncoder`. Transformasi ini wajib dilakukan karena fungsi loss pada *Machine Learning* tidak dapat membaca tipe data *string*/huruf.
+- **Encoding (Uniform Target Mapping):** Mengubah nilai kategori pada seluruh 6 kolom target aspek (`positif`, `negatif`, `netral`) menjadi indeks bilangan bulat seragam (`negatif -> 0`, `netral -> 1`, `positif -> 2`) ke dalam matriks target berdimensi $(N \times 6)$. Transformasi ini wajib dilakukan agar fungsi *loss* pada algoritma *Machine Learning* dan *Deep Learning* dapat memproses target secara konsisten antar-aspek.
 
 ### 5.4 Data Splitting
 
 **Strategi pembagian data:**
-Menggunakan metode *Stratified Split* dengan rasio pembagian berskala 80:10:10.
-- **Training set:** 80% (± 5.620 samples)
-- **Validation set:** 10% (± 702 samples)
-- **Test set:** 10% (± 703 samples)
-- Random state: 42 untuk reproducibility
+Menggunakan metode *Stratified Split* dengan rasio pembagian berskala **80:10:10** dari total **± 6.158 sampel** bersih:
+- **Training set:** 80% (± 4.926 samples)
+- **Validation set:** 10% (± 616 samples)
+- **Test set:** 10% (616 samples)
+- **Random state:** `42` untuk reproducibility
 
 **Alasan strategi splitting:**
-* Metode **Stratified Split** (`stratify=y`) diaplikasikan karena distribusi kelas target sentimen terdiri dari 40% Positif, 40% Negatif, dan 20% Netral. Stratifikasi akan memaksa pembagian rasio proporsional ini (40:40:20) selalu dipertahankan di masing-masing partisi Latih, Validasi, dan Uji agar model tidak dilatih atau diuji pada data yang bias.
-* **Pencegahan Data Leakage (Sangat Penting):** Inisiasi `.fit()` pada algoritma `TfidfVectorizer` dan `LabelEncoder` **secara ketat hanya diterapkan pada Training Set**. Validation dan Test set murni hanya melalui tahap `.transform()`. Hal ini menjamin bahwa model tidak pernah melihat satupun kata (*vocabulary*) baru yang bersumber dari data uji.
+- Metode **Stratified Split** diaplikasikan menggunakan stratifikasi gabungan multi-aspek dengan mekanisme *fallback* berdasarkan aspek kelas minoritas terkecil (`aspek_desain_encoded`, yang hanya memiliki 63 sampel negatif atau ± 1,0%). Strategi ini memaksa keterwakilan proporsional kelas minoritas tetap terjaga di partisi Latih, Validasi, dan Uji agar evaluasi model tidak bias.
+- **Pencegahan Data Leakage (Sangat Penting):** Inisiasi `.fit()` pada algoritma `TfidfVectorizer` **secara ketat hanya diterapkan pada Training Set (`X_train`)**. Validation set (`X_val`) dan Test set (`X_test`) murni hanya melalui tahap `.transform()`. Hal ini menjamin bahwa model tidak pernah melihat satupun kosakata (*vocabulary*) maupun bobot IDF yang bersumber dari data validasi maupun data uji.
 
 ### 5.5 Data Balancing (jika diperlukan)
 
 **Teknik yang digunakan:**
-- Class weights
+- Class weights (`class_weight='balanced'`) & Weighted Cross-Entropy Loss
 
 **Penjelasan penggunaan data balancing:**
-Berdasarkan visualisasi persentase EDA pada set yang telah dibersihkan, data sentimen tidak mengalami ketidakseimbangan yang teramat ekstrem (masih di tahap rasio 40-40-20). Oleh karena itu, pendekatan *oversampling* sintetik menggunakan algoritma seperti SMOTE sengaja tidak dilakukan guna menghindari risiko *overfitting*. Sebagai kompensasi atas kelas minoritas (Netral yang hanya 20%), penyeimbangan akan dilakukan secara internal dari dalam arsitektur algoritma ML melalui aktivasi parameter `class_weight='balanced'` (pada model Logistic Regression dan LightGBM).
+Berdasarkan hasil eksplorasi distribusi pada ke-6 aspek, data mengalami **ketimpangan kelas yang ekstrem (*severe class imbalance*)**, di mana kelas `Netral` mendominasi **59,9% hingga 86,2%** data pada setiap aspek, sedangkan kelas `Negatif` hanya berkisar antara **1,0% hingga 4,5%** (seperti pada `aspek_desain` dan `aspek_kenyamanan`). Oleh karena itu, pendekatan *oversampling* sintetik menggunakan algoritma seperti SMOTE sengaja tidak dilakukan karena pembuatan sampel vektor TF-IDF sintetik secara bersamaan pada **6 target aspek** berisiko merusak korelasi semantik antar-aspek dan memicu *overfitting*. Sebagai kompensasi atas kelas minoritas, penyeimbangan dilakukan secara internal dari dalam arsitektur algoritma melalui aktivasi parameter `class_weight='balanced'` pada model Logistic Regression dan LightGBM, serta penerapan *Weighted Cross-Entropy Loss* pada model Multi-Head IndoBERT.
 
 ### 5.6 Ringkasan Data Preparation
 
 **Per langkah, jelaskan:**
 1. **Apa yang dilakukan**
-   Menghapus 14.815 baris data ulasan duplikat (67%) dan membuang kolom target orisinal (`category`) yang tidak lagi digunakan. Membuat target 3 aspek baru secara otomatis via kamus kata (*pseudo-labeling*). Melakukan pra-pemrosesan teks (*lowercasing*, *cleansing* simbol, *stopword*, *stemming* dengan Sastrawi), mengubah label target ke bentuk angka bulat (*Label Encoding*), membelah dataset melalui metode *Stratified Split* (80:10:10), serta mengekstrak teks ke matriks matematis dengan TF-IDF (khusus di-*fit* pada *training set*).
+   Memilih berkas dataset utama berlabel 6 aspek (`dataset_labeled_v6.xlsx`), menghapus nilai kosong (`NaN`), membuang baris duplikat ulasan serta teks *noise* (< 5 karakter), memformulasikan 6 kolom target aspek produk fesyen (`kualitas`, `bahan`, `ukuran`, `desain`, `warna`, `kenyamanan`), melakukan pra-pemrosesan teks (*lowercasing* dan pembersihan simbol/angka via Regex dengan mempertahankan kata negasi), mengonversi label target ke format numerik seragam (`0: negatif`, `1: netral`, `2: positif`), membelah dataset melalui metode *Stratified Split* (80:10:10), mengekstrak teks ke matriks matematis dengan TF-IDF *unigram-bigram* (khusus di-*fit* pada *training set*), serta menerapkan pembobotan kelas (`class_weight='balanced'`).
 2. **Mengapa penting**
-   Pembersihan duplikasi ganda sangat krusial agar tidak ada data bocor (*data leakage*) ke fase evaluasi (*test set*). Kolom kategori asli dihapus karena tidak berguna untuk tujuan proyek, sehingga diganti dengan *pseudo-labeling* spesifik (Pengiriman, Layanan, Produk) agar proyek benar-benar mengusung "Analisis Berbasis Aspek". Teks harus dibersihkan dari *noise* (angka, simbol, kata hubung) karena ML lebih mudah mengklasifikasikan data yang terpusat pada kata-kata sentimen. Ekstraksi dan pengkodean teks (TF-IDF/Embedding) penting karena algoritma hanya menerima susunan numerik murni.
+   Pembersihan duplikasi ganda sebelum pembagian data sangat krusial agar tidak terjadi kebocoran data (*data leakage*) ke fase evaluasi (*test set*). Penggunaan 6 target aspek eksplisit menggantikan *pseudo-labeling* manual sehingga analisis sentimen berbasis aspek lebih akurat dan spesifik pada domain fesyen. Pembersihan simbol/angka mengurangi *noise* kosakata, sementara pembagian terstratifikasi dan pembobotan kelas mencegah model menjadi bias yang hanya menebak kelas mayoritas (`Netral`) dan mengabaikan keluhan pelanggan (`Negatif`).
 3. **Bagaimana implementasinya**
-   Prosedur *drop* duplikat maupun fitur tak terpakai dikerjakan murni melalui *method* bawaan `pandas` (seperti `drop_duplicates` dan `drop`). Manipulasi *string* dilakukan melalui modul `re` (Regular Expression) bersama pustaka NLP lokal `Sastrawi`. Strategi *splitting* diinstruksikan lewat fungsi `train_test_split` dari pustaka `scikit-learn` dengan parameter pengunci *random_state* dan *stratify*. Representasi fitur dituntaskan menggunakan inisiasi `TfidfVectorizer` dan kelas `LabelEncoder`.
+   Pemuatan berkas dari Kaggle dan prosedur pembersihan data dikerjakan menggunakan `kagglehub` dan *method* bawaan `pandas` (`dropna`, `drop_duplicates`, dan `drop`). Manipulasi *string* dilakukan melalui modul `re` (Regular Expression) bersama opsi pustaka NLP lokal `Sastrawi`. Pengkodean target dikerjakan via pemetaan kamus *dictionary* pada `pandas`, strategi *splitting* diinstruksikan lewat fungsi `train_test_split` dari `scikit-learn` dengan pengunci `random_state=42` dan `stratify`, sedangkan representasi fitur dituntaskan menggunakan `TfidfVectorizer` (`scikit-learn`) dan *tokenizer* `transformers` untuk IndoBERT.
 
 ---
 
