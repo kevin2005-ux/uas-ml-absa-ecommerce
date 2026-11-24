@@ -308,43 +308,77 @@ Berdasarkan hasil eksplorasi distribusi pada ke-6 aspek, data mengalami **ketimp
 
 #### 6.1.1 Deskripsi Model  **[M]**
 
-**Nama Model:** [Nama model, misal: Logistic Regression]  
+**Nama Model:** Multi-Output Logistic Regression (`MultiOutputClassifier` + `LogisticRegression`)  
 **Teori Singkat:**  
-[Jelaskan secara singkat bagaimana model ini bekerja]  
+Logistic Regression merupakan model klasifikasi linear probabilistik yang menghitung kombinasi linear antara vektor fitur masukan (bobot TF-IDF) dengan matriks parameter bobot ($W$), lalu memetakannya ke dalam distribusi probabilitas tiap kelas sentimen (`0: Negatif`, `1: Netral`, `2: Positif`) menggunakan fungsi aktivasi *Softmax* (multinomial). Karena permasalahan memiliki 6 target aspek sekaligus, algoritma dibungkus ke dalam arsitektur `MultiOutputClassifier` yang melatih 6 estimator Logistic Regression independen secara paralel—masing-masing bertanggung jawab memprediksi polaritas sentimen pada satu aspek spesifik.
+
 **Alasan Pemilihan:**  
-[Mengapa memilih model ini sebagai baseline?]
+Model ini dipilih sebagai *baseline* karena arsitekturnya sederhana, sangat efisien secara komputasi (waktu pelatihan hanya **10,53 detik** pada 4.926 sampel latih), bersifat deterministik, serta memiliki interpretabilitas tinggi melalui nilai koefisien bobot kata untuk memvalidasi kata kunci indikator sentimen pada setiap aspek produk fesyen.
 
 #### 6.1.2 Hypothesis Space & Inductive Bias  **[M]**
 
-- **Model family / arsitektur:** [misal: model linear]
-- **Hypothesis space:** [himpunan fungsi yang dapat direpresentasikan, misal: batas keputusan linear]
-- **Inductive bias / asumsi:** [misal: hubungan fitur-target linear, fitur independen]
-- **Implikasi terhadap dataset Anda:** [apakah asumsi cocok dengan data?]
+- **Model family / arsitektur:** Generalized Linear Model (Model Klasifikasi Linear Multikelas *Multi-Output*).
+- **Hypothesis space:** Himpunan fungsi pemisah berupa *hyperplane* linear dalam ruang vektor fitur TF-IDF berdimensi $d = 5.000$ untuk masing-masing dari 6 aspek target secara terpisah.
+- **Inductive bias / asumsi:** 
+  1. Hubungan antara kemunculan kata (bobot TF-IDF) dan log-odds kelas sentimen bersifat aditif dan linear.
+  2. Fitur kata bersifat independen secara kondisional (*bag-of-words* unigram) tanpa memperhitungkan urutan kata maupun interaksi non-linear antar-frasa.
+  3. Keenam target aspek diprediksi secara independen (*conditional independence* antar-target) tanpa berbagi sinyal prediksi lintas aspek.
+- **Implikasi terhadap dataset Anda:** Asumsi linear ini bekerja dengan baik pada aspek yang memiliki kata kunci eksplisit dan konsisten, seperti `aspek_ukuran` (*"kekecilan"*, *"kebesaran"*, *"pas"*) dan `aspek_bahan` (*"adem"*, *"lembut"*, *"tipis"*). Namun, keterbatasan representasi *unigram* linear membuat model kesulitan memisahkan polaritas pada ulasan majemuk yang mengandung klausa kontras (misal *"desain kece tapi bahan tipis"*), sehingga kata milik aspek lain seperti `tipis` ikut terbaca sebagai indikator negatif pada `aspek_desain`.
 
 #### 6.1.3 Implementasi (Ringkas)  **[M]**
 ```python
-# Contoh kode (opsional, bisa dipindah ke GitHub)
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.multioutput import MultiOutputClassifier
 
-model_baseline = LogisticRegression(C=1.0, max_iter=100)
-model_baseline.fit(X_train, y_train)
-y_pred_baseline = model_baseline.predict(X_test)
+# 1. Ekstraksi fitur TF-IDF dasar (fit hanya pada training set)
+tfidf_vectorizer = TfidfVectorizer(max_features=5000)
+X_train_tfidf = tfidf_vectorizer.fit_transform(X_train)
+X_val_tfidf = tfidf_vectorizer.transform(X_val)
+
+# 2. Inisialisasi & pelatihan Multi-Output Logistic Regression
+base_lr = LogisticRegression(
+    class_weight="balanced",
+    C=1.0,
+    max_iter=1000,
+    random_state=42,
+)
+baseline_model = MultiOutputClassifier(base_lr, n_jobs=-1)
+baseline_model.fit(X_train_tfidf, Y_train)
+Y_val_pred = baseline_model.predict(X_val_tfidf)
 ```
 
 #### 6.1.4 Optimization: Objective, Hyperparameter & Regularisasi  **[O]**
 
-**Objective/loss yang dioptimalkan:** [misal: log-loss + L2]  
+**Objective/loss yang dioptimalkan:**  
+*Weighted Multinomial Cross-Entropy Loss* (Log-Loss) yang dilengkapi dengan penalti regularisasi **L2 (Ridge)** untuk mengendalikan besaran bobot dan mencegah *overfitting* pada matriks fitur TF-IDF yang berdimensi tinggi dan jarang (*sparse*):
+$$\mathcal{L}(W) = -\frac{1}{N} \sum_{i=1}^{N} \sum_{c=0}^{2} w_c \, y_{i,c} \log(\hat{p}_{i,c}) + \frac{1}{2C} \Vert{}W\Vert{}_2^2$$
+dengan $w_c = \frac{N}{3 \cdot N_c}$ sebagai faktor pembobot kelas otomatis (`class_weight='balanced'`) agar kesalahan klasifikasi pada kelas minoritas (`Negatif`) memperoleh penalti yang seimbang terhadap kelas mayoritas (`Netral`).
+
 **Parameter yang digunakan:**
-```
-[Tuliskan parameter penting, contoh:]
-- C (regularization): 1.0
-- solver: 'lbfgs'
-- max_iter: 100
+```text
+- max_features (TF-IDF)     : 5000 (unigram)
+- C (inverse regularization): 1.0 (regularisasi L2 standar)
+- penalty                   : 'l2'
+- solver                    : 'lbfgs'
+- class_weight              : 'balanced'
+- max_iter                  : 1000
+- random_state              : 42
 ```
 
 #### 6.1.5 Hasil Awal  **[O → P]**
 
-**[Tuliskan hasil awal pada validation set; evaluasi akhir pada test set dijelaskan di Bab 7]**
+Evaluasi awal pada **Data Validation (616 sampel)** menghasilkan **Overall Accuracy sebesar 0.9332**, **Weighted F1 sebesar 0.9358**, dan **Overall Macro F1 sebesar 0.7666**:
+
+| Aspek | Accuracy | Macro Precision | Macro Recall | Macro F1 | Weighted F1 | F1 Negatif (0) | F1 Netral (1) | F1 Positif (2) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`aspek_kualitas`** | 0.8994 | 0.7309 | 0.8009 | 0.7608 | 0.9032 | 0.5385 | 0.9423 | 0.8018 |
+| **`aspek_bahan`** | 0.9156 | 0.7960 | 0.8377 | 0.8150 | 0.9170 | 0.6286 | 0.9502 | 0.8663 |
+| **`aspek_ukuran`** | 0.9578 | 0.8214 | 0.8716 | 0.8418 | 0.9590 | 0.7059 | 0.9848 | 0.8346 |
+| **`aspek_desain`** | 0.9594 | 0.7142 | 0.7522 | 0.7276 | 0.9617 | 0.2500 | 0.9731 | 0.9598 |
+| **`aspek_warna`** | 0.9464 | 0.7641 | 0.8711 | 0.7973 | 0.9505 | 0.4848 | 0.9728 | 0.9343 |
+| **`aspek_kenyamanan`** | 0.9205 | 0.6549 | 0.6683 | 0.6574 | 0.9233 | 0.1176 | 0.9456 | 0.9091 |
+| **RATA-RATA (OVERALL)** | **0.9332** | **0.7469** | **0.8003** | **0.7666** | **0.9358** | **0.4542** | **0.9615** | **0.8843** |
 
 ---
 
