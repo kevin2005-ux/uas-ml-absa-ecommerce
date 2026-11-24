@@ -386,25 +386,29 @@ Evaluasi awal pada **Data Validation (616 sampel)** menghasilkan **Overall Accur
 
 #### 6.2.1 Deskripsi Model  **[M]**
 
-**Nama Model:** [Nama model, misal: Random Forest / XGBoost]  
+**Nama Model:** [Tuned LightGBM (LGBMClassifier) dengan ClassifierChain + TF-IDF Unigram–Bigram (1, 2)]  
 **Teori Singkat:**  
-[Jelaskan bagaimana algoritma ini bekerja]
+[LightGBM (Light Gradient Boosting Machine) membangun ensemble pohon keputusan secara boosting (memperbaiki residual/gradient kesalahan prediksi secara bertahap) dengan strategi pertumbuhan leaf-wise (memecah daun dengan gain terbesar) dan histogram-based splitting. Melalui pendekatan rantai klasifikasi (ClassifierChain), prediksi pada aspek sebelumnya dimanfaatkan sebagai informasi tambahan untuk memprediksi aspek berikutnya sehingga korelasi antar-aspek produk fashion dapat diperhitungkan.]
 
 **Alasan Pemilihan:**  
-[Mengapa memilih model ini?]
+[Cepat diproses dan memakai fitur TF-IDF unigram–bigram (1, 2) sehingga frasa dua kata seperti "tidak luntur" atau "nggak kekecilan" bisa dikenali, sekaligus menangkap pola non-linear.]
 
 **Keunggulan:**
-- [Sebutkan keunggulan]
+- [Cepat dilatih dan efisien untuk data berdimensi besar.]
+- [Menangkap hubungan non-linear serta frasa dua kata (bigram).]
+- [Bisa memanfaatkan kaitan antar-aspek lewat ClassifierChain dan mengatur min_child_samples untuk kelas minoritas.]
 
 **Kelemahan:**
-- [Sebutkan kelemahan]
+- [Cenderung mudah overfitting pada data latih bila kedalaman/jumlah daun dan learning rate tidak dikontrol dengan baik.]
+- [Urutan rantai aspek dapat memengaruhi hasil prediksi aspek berikutnya.]
+- [Membutuhkan tuning hiperparameter agar performa kelas minoritas (Negatif) tetap optimal.]
 
 #### 6.2.2 Hypothesis Space & Inductive Bias  **[M]**
 
-- **Model family / arsitektur:** [misal: ensemble pohon keputusan]
-- **Hypothesis space:** [fungsi non-linear piecewise, interaksi fitur otomatis, dll.]
-- **Inductive bias / asumsi:** [misal: data tabular dengan struktur ambang/threshold]
-- **Perbandingan dengan baseline:** [apa yang bisa dipelajari model ini yang tidak bisa baseline?]
+- **Model family / arsitektur:** [Gradient Boosted Decision Trees (leaf-wise) dengan skema rantai (ClassifierChain) untuk 6 aspek.]
+- **Hypothesis space:** [Gabungan aturan keputusan bertingkat (piecewise) dari banyak pohon pada fitur TF-IDF (1, 2) dan prediksi aspek sebelumnya.]
+- **Inductive bias / asumsi:** [Kesalahan dapat ditekan bertahap lewat aturan ambang (split) fitur, frasa dua kata memberi makna lebih jelas dibanding satu kata saja, dan urutan aspek membawa informasi tambahan.]
+- **Perbandingan dengan baseline:** [Lebih fleksibel dari Logistic Regression unigram independen karena mampu membaca frasa dua kata, pola non-linear, dan hubungan antar-aspek.]
 
 #### 6.2.3 Implementasi (Ringkas)  **[M]**
 ```python
