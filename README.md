@@ -411,18 +411,27 @@ Evaluasi awal pada **Data Validation (616 sampel)** menghasilkan **Overall Accur
 - **Perbandingan dengan baseline:** [Lebih fleksibel dari Logistic Regression unigram independen karena mampu membaca frasa dua kata, pola non-linear, dan hubungan antar-aspek.]
 
 #### 6.2.3 Implementasi (Ringkas)  **[M]**
-```python
-# Contoh kode
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.multioutput import ClassifierChain
+from lightgbm import LGBMClassifier
 
-model_advanced = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    random_state=42
+tfidf_lgb = TfidfVectorizer(ngram_range=(1, 2), max_features=10000)
+X_train_lgb = tfidf_lgb.fit_transform(X_train)
+X_val_lgb = tfidf_lgb.transform(X_val)
+
+base_lgb = LGBMClassifier(
+    n_estimators=200,
+    learning_rate=0.05,
+    min_child_samples=3,
+    class_weight="balanced",
+    random_state=42,
+    n_jobs=-1,
+    verbose=-1,
 )
-model_advanced.fit(X_train, y_train)
-y_pred_advanced = model_advanced.predict(X_test)
-```
+
+advanced_model = ClassifierChain(base_lgb, order="random", random_state=42)
+advanced_model.fit(X_train_lgb, Y_train)
+Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
 
 #### 6.2.4 Optimization: Hyperparameter Tuning  **[O]**
 
