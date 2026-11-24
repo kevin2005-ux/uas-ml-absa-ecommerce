@@ -443,19 +443,26 @@ Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
 **Parameter yang digunakan:**
 ```
 [Tuliskan parameter penting, contoh:]
-- n_estimators: 200
-- max_depth: 0.05
-- min_child_samples: 3
+- n_estimators: 200 (model awal) / 200 (hasil tuning)
+- max_depth: 0.05 (model awal) / 0.1 (hasil tuning)
+- num_leaves: 15 (hasil tuning)
+- min_child_samples: 3 (model awal) / 5 (hasil tuning)
 - class_weight: 'balanced'
 - random_state: 42
 ```
 
 **Hyperparameter Tuning (WAJIB minimal 1 metode sederhana):**
-- Metode: [Random Search / Grid Search]
-- Search space: [n_estimators: [100, 200, 300], learning_rate: [0.03, 0.05, 0.1], num_leaves: [15, 31], min_child_samples: [3, 5, 10]]
-- Skema validasi: [Cross-Validation / Validation Set (616 sampel)]
-- Best parameters: [...]
-- Skor validasi sebelum vs sesudah tuning: [...]
+- Metode: [RandomizedSearchCV (n_iter=4, scoring='f1_macro')]
+- Search space: [n_estimators: [100, 200], learning_rate: [0.05, 0.1], num_leaves: [15, 31], min_child_samples: [3, 5]]
+- Skema validasi: [cv=2 saat search, lalu dievaluasi pada Validation Set (616 sampel)]
+- Best parameters: [num_leaves=15, n_estimators=200, min_child_samples=5, learning_rate=0.1]
+- Skor validasi sebelum vs sesudah tuning:
+[
+Overall Macro F1: 0.7929 → 0.7945
+
+Overall Accuracy: 0.9629 → 0.9619
+
+Weighted F1: 0.9614 → 0.9603]
 
 #### 6.2.5 Kontrol Overfitting  **[O]**
 [Jelaskan regularisasi/pembatasan kompleksitas yang dipakai, misal: max_depth, min_samples_leaf, early stopping pada boosting]
