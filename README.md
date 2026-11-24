@@ -63,13 +63,14 @@ Pada proyek ini, mahasiswa diharapkan dapat:
 ## 2. PROJECT OVERVIEW  **[L]**
 
 ### 2.1 Latar Belakang
-Pelaku usaha mikro, kecil, dan menengah (UMKM) di platform e-commerce sering kali kewalahan menganalisis ribuan ulasan pelanggan yang masuk setiap harinya secara manual. Ulasan tersebut umumnya bersifat majemuk; di mana pelanggan bisa memuji satu hal namun mengkritik hal lain dalam satu kalimat. Analisis sentimen tradisional yang hanya mengklasifikasikan ulasan menjadi positif atau negatif secara umum tidak cukup memberikan wawasan yang bisa dieksekusi (*actionable insight*).
+Pelaku usaha mikro, kecil, dan menengah (UMKM) di sektor fesyen pada platform e-commerce (seperti Shopee) sering kali kewalahan menganalisis ribuan ulasan pelanggan yang masuk setiap harinya secara manual. Ulasan produk fesyen umumnya bersifat majemuk; di mana pelanggan dapat memuji satu karakteristik produk namun mengkritik bagian lainnya dalam satu kalimat yang sama (misalnya memuji warna produk tetapi mengeluhkan bahan yang tipis atau ukuran yang kekecilan). Analisis sentimen tradisional tingkat dokumen (*document-level*) yang hanya mengklasifikasikan ulasan menjadi positif atau negatif secara umum tidak cukup memberikan wawasan yang dapat langsung dieksekusi (*actionable insight*).
 
-Oleh karena itu, diperlukan Aspect-Based Sentiment Analysis (ABSA) untuk mengekstraksi sentimen berdasarkan aspek spesifik seperti kualitas produk, harga, pengiriman, dan pelayanan (Liu, 2012). Dengan adanya sistem otomasi ini, UMKM dapat mengetahui secara presisi area mana yang perlu diperbaiki (misalnya, mengganti jasa ekspedisi tanpa harus mengubah kualitas produk) untuk meningkatkan daya saing di pasar digital.
+Oleh karena itu, diperlukan **Aspect-Based Sentiment Analysis (ABSA)** untuk mengekstraksi sentimen secara spesifik pada **6 aspek krusial produk fesyen**, yaitu **kualitas, bahan, ukuran, desain, warna, dan kenyamanan** (Liu, 2012). Dengan adanya sistem otomasi berbasis pemrosesan bahasa alami (*Natural Language Processing*), UMKM dapat mengetahui secara presisi area mana yang perlu segera diperbaiki—misalnya memperbaiki panduan ukuran (*size chart*) atau mengganti pemasok kain tanpa harus merombak desain model—guna menekan tingkat pengembalian barang (*return rate*) dan meningkatkan daya saing di pasar digital.
 
 **Referensi:**
 - Liu, B. (2012). *Sentiment Analysis and Opinion Mining*. Synthesis Lectures on Human Language Technologies.
 - Ke, G., et al. (2017). *LightGBM: A Highly Efficient Gradient Boosting Decision Tree*. Advances in Neural Information Processing Systems (NeurIPS).
+- Wilie, B., et al. (2020). *IndoNLU: Benchmark and Resources for Evaluating Indonesian Natural Language Understanding*. Proceedings of AACL-IJCNLP.
 
 ### 2.2 Keterkaitan dengan SDGs (WAJIB)
 
@@ -77,49 +78,49 @@ Oleh karena itu, diperlukan Aspect-Based Sentiment Analysis (ABSA) untuk mengeks
 |----------|--------------|
 | **SDG yang dipilih** | Goal 8: Decent Work & Economic Growth |
 | **Target SDG** | Target 8.2: Achieve higher levels of economic productivity through diversification, technological upgrading and innovation, including through a focus on high-value added and labour-intensive sectors |
-| **Masalah nyata** | UMKM kesulitan memproses data ulasan dalam jumlah besar secara manual, sehingga inovasi produk dan perbaikan layanan sering salah sasaran. |
-| **Peran ML** | Machine Learning (khususnya NLP) mampu membedah teks bahasa natural secara otomatis ke dalam kategori sentimen per aspek, menggantikan analisis manual. |
-| **Indikator kontribusi** | Otomatisasi ini membantu UMKM mengambil keputusan berbasis data (*data-driven decision*) dengan lebih cepat, mengurangi *churn rate* pelanggan, dan meningkatkan produktivitas penjualan. |
-| **Pertimbangan etika** | Terdapat potensi bias dari ulasan palsu (*fake reviews*) atau ragam bahasa gaul yang tidak baku. Privasi terjaga karena dataset menggunakan data publik yang sudah ter-anonimisasi. |
+| **Masalah nyata** | UMKM fesyen kesulitan memproses dan mengelompokkan ribuan ulasan pelanggan secara manual untuk menemukan penyebab spesifik keluhan (seperti ukuran tidak pas, kain panas, atau warna pudar), sehingga perbaikan kualitas produk sering salah sasaran. |
+| **Peran ML** | Machine Learning dan Deep Learning (khususnya NLP) mampu membedah teks ulasan berbahasa Indonesia secara otomatis ke dalam kategori sentimen pada 6 aspek produk secara serentak (*multi-output*), menggantikan analisis manual. |
+| **Indikator kontribusi** | Otomatisasi ini membantu UMKM mengambil keputusan perbaikan produk berbasis data (*data-driven decision*) dengan lebih cepat, mengurangi *return rate* maupun *churn rate* pelanggan, dan meningkatkan produktivitas penjualan. |
+| **Pertimbangan etika** | Terdapat potensi bias dari ragam bahasa gaul (*slang*), singkatan e-commerce tidak baku, serta ketimpangan distribusi kelas (*class imbalance*) di mana keluhan negatif pada aspek tertentu berjumlah sangat sedikit. Privasi pelanggan tetap terjaga karena dataset menggunakan data publik yang sudah ter-anonimisasi. |
 
 ### 2.3 Ringkasan Alur Lifecycle Proyek
-Proyek ini dimulai dengan mendefinisikan dataset ulasan e-commerce berbahasa Indonesia dan merumuskannya sebagai tugas klasifikasi multikelas/multilabel **[L]**. Selanjutnya, dirancang tiga model: Logistic Regression (baseline), LightGBM (advanced), dan LSTM/IndoBERT (deep learning) dengan mengekstraksi fitur teks (TF-IDF/Embedding) **[M]**. Model tersebut akan dioptimasi melalui hyperparameter tuning **[O]** dan dievaluasi kinerjanya menggunakan metrik F1-Score, Precision, dan Recall **[P]**, guna melihat model mana yang terbaik untuk sistem UMKM.
+Proyek ini dimulai dengan mendefinisikan dataset ulasan produk fesyen Shopee berbahasa Indonesia dan merumuskannya sebagai tugas klasifikasi *multi-output multiclass* pada 6 aspek sekaligus **[L]**. Selanjutnya, dirancang tiga tingkatan model: **Multi-Output Logistic Regression** (*baseline*), **Tuned LightGBM + ClassifierChain** (*advanced ML*), dan **Multi-Head IndoBERT / BiLSTM** (*deep learning*) dengan mengekstraksi fitur teks menggunakan TF-IDF *unigram–bigram* serta representasi *contextual embedding* **[M]**. Model tersebut dioptimasi melalui pembobotan kelas (*class weighting*) dan *hyperparameter tuning* **[O]**, kemudian dievaluasi kinerjanya menggunakan metrik **Macro F1-Score**, Precision, Recall, dan Accuracy **[P]**, guna menentukan arsitektur terbaik untuk sistem analitik UMKM.
 
 ---
 
 ## 3. BUSINESS UNDERSTANDING / PROBLEM UNDERSTANDING  **[L]**
 
 ### 3.1 Problem Statements
-1. Pelaku UMKM membutuhkan waktu yang lama untuk mengkategorikan masalah secara manual dari ribuan ulasan pelanggan.
-2. Analisis sentimen tingkat dokumen (general) gagal menangkap sentimen multidimensi (misal: "barang bagus tapi pengiriman lambat").
-3. Dibutuhkan model machine learning yang tangguh terhadap ragam bahasa tidak baku (slang) pada ulasan e-commerce berbahasa Indonesia.
+1. Pelaku UMKM fesyen membutuhkan waktu yang sangat lama untuk membaca dan mengkategorikan keluhan pelanggan secara manual dari ribuan ulasan produk.
+2. Analisis sentimen tingkat dokumen (*general sentiment*) gagal menangkap sentimen multidimensi yang kontras dalam satu ulasan (misal: *"warnanya cantik sesuai foto, tapi bahannya tipis menerawang dan ukuran kekecilan"*).
+3. Dibutuhkan model *machine learning* yang tangguh terhadap ragam bahasa tidak baku (*slang* Shopee), struktur negasi, serta ketimpangan kelas ekstrem (*severe class imbalance*) pada aspek dengan ulasan negatif minoritas.
 
 ### 3.2 Formulasi Learning Problem (WAJIB)
 
 | Komponen | Jawaban Anda |
 |----------|--------------|
-| **Target** | Klasifikasi teks (Supervised Learning) multilabel/multikelas untuk mendeteksi sentimen (Positif/Negatif/Netral) pada aspek spesifik (Produk, Harga, Pengiriman, Layanan). |
-| **Objective** | Mengoptimalkan *Cross-entropy loss*. Metrik keberhasilan utama adalah F1-Score (karena potensi ketidakseimbangan kelas) dan Accuracy. |
-| **Data** | Data teks ulasan publik e-commerce (Tokopedia, Shopee) berbahasa Indonesia (sekitar 3.000 - 5.000 baris) berformat CSV dari Kaggle. Asumsi data adalah independen dan representatif terhadap percakapan *online marketplace*. |
+| **Target** | Klasifikasi teks (*Supervised Learning*) berbentuk **Multi-Output Multiclass Classification** untuk mendeteksi 3 polaritas sentimen (`Negatif`, `Netral`, `Positif`) secara serentak pada **6 aspek produk fesyen** (`aspek_kualitas`, `aspek_bahan`, `aspek_ukuran`, `aspek_desain`, `aspek_warna`, dan `aspek_kenyamanan`). |
+| **Objective** | Mengoptimalkan *Weighted Cross-Entropy Loss* dan pembobotan kelas seimbang (`class_weight='balanced'`). Metrik keberhasilan utama adalah **Macro F1-Score** (untuk mengukur performa deteksi secara adil di tengah dominasi kelas `Netral`) serta *Accuracy* dan *Weighted F1*. |
+| **Data** | Data teks ulasan publik produk fesyen Shopee berbahasa Indonesia dari Kaggle (`jareedhnnn/shopee-fashion-reviews-indonesian`, berkas `dataset_labeled_v6.xlsx`) berjumlah **6.158 baris** (serta pengayaan data ulasan negatif bintang 1–3). Asumsi data adalah independen antar-ulasan dan representatif terhadap percakapan ulasan fesyen di *online marketplace*. |
 
 ### 3.3 Goals
-1. Mengotomatisasi analisis ulasan per aspek untuk membantu UMKM mengambil keputusan bisnis dengan lebih cepat (mendukung SDG 8.2).
-2. Membangun model machine learning dan deep learning untuk ekstraksi aspek dan klasifikasi sentimen dengan target F1-Score > 80%.
-3. Membandingkan performa pendekatan tradisional (TF-IDF) dengan algoritma *Gradient Boosting* (LightGBM) dan Deep Learning dalam menangani teks ulasan bahasa Indonesia.
+1. Mengotomatisasi analisis sentimen pada 6 aspek produk fesyen untuk membantu UMKM mengambil keputusan bisnis dan perbaikan produk dengan lebih cepat (mendukung SDG 8.2).
+2. Membangun pipeline model *machine learning* dan *deep learning* untuk klasifikasi sentimen berbasis aspek dengan target performa keseluruhan (**Overall Macro F1-Score**) **> 80%**.
+3. Membandingkan performa pendekatan linear (*Logistic Regression* + TF-IDF), algoritma *Gradient Boosting* berantai (*LightGBM + ClassifierChain* + TF-IDF *Unigram–Bigram*), dan *Deep Learning* kontekstual (*Multi-Head IndoBERT / BiLSTM*) dalam menangani teks ulasan fesyen bahasa Indonesia.
 
 ### 3.4 Solution Approach  **[M]**
 
 #### **Model 1 – Baseline Model**
-**Logistic Regression / Naive Bayes + TF-IDF**
-Model ini dipilih sebagai *baseline* karena kesederhanaannya, sangat efisien secara komputasi, dan sering kali menjadi tolak ukur standar yang baik dan *robust* untuk tugas klasifikasi teks berbasis *bag-of-words* atau TF-IDF.
+**Multi-Output Logistic Regression (`class_weight='balanced'`) + TF-IDF**
+Model ini dipilih sebagai *baseline* karena kesederhanaannya, sangat efisien secara komputasi, deterministik, serta mudah diinterpretasi melalui koefisien bobot kata per aspek. Penambahan parameter `class_weight='balanced'` diterapkan sebagai tolok ukur awal untuk menekan bias prediksi terhadap kelas mayoritas (`Netral`).
 
 #### **Model 2 – Advanced / ML Model**
-**LightGBM Classifier + TF-IDF**
-LightGBM adalah varian *Gradient Boosting* yang sangat cepat dan efisien dalam menangani fitur berdimensi tinggi (yang dihasilkan oleh TF-IDF). LightGBM dipilih sebagai model utama karena mampu memodelkan hubungan non-linear dari kata-kata yang tidak dapat ditangkap oleh *Logistic Regression*, dengan waktu training yang jauh lebih cepat dibandingkan *Random Forest* standar.
+**Tuned LightGBM (`ClassifierChain`) + TF-IDF Unigram–Bigram `(1, 2)`**
+LightGBM adalah varian *Gradient Boosting Decision Tree* yang sangat cepat dan efisien dalam menangani matriks fitur *sparse* berdimensi tinggi dari TF-IDF. Penggunaan fitur *unigram–bigram* membantu menangkap frasa negasi dua kata (seperti *"tidak luntur"* atau *"nggak kekecilan"*), sementara arsitektur **`ClassifierChain`** memodelkan korelasi berantai antar-aspek (seperti hubungan antara `bahan`, `kenyamanan`, dan `kualitas`) serta mampu menangkap interaksi non-linear dengan penyesuaian `min_child_samples=3` untuk kelas minoritas.
 
 #### **Model 3 – Deep Learning Model (WAJIB)**
-**LSTM (Long Short-Term Memory) / BiLSTM + Word Embedding**
-Untuk dataset berupa teks (NLP), arsitektur RNN seperti LSTM dipilih karena *inductive bias*-nya mampu memahami konteks berurutan (*sequential dependency*) dari susunan kata dalam kalimat. Tidak seperti TF-IDF yang menghilangkan urutan kata, LSTM dapat mendeteksi makna kata berdasarkan kata sebelum dan sesudahnya (misal mendeteksi negasi: "tidak bagus"). *(Alternatif: menggunakan Transfer Learning dengan Pre-trained model IndoBERT jika resource memadai).*
+**Multi-Head IndoBERT (`indobert-base-p1`) / BiLSTM + Word Embedding**
+Untuk dataset berupa teks (NLP), arsitektur berbasis *Transformer* (**Multi-Head IndoBERT** dengan 6 *classification head* paralel) maupun **BiLSTM** dipilih karena kemampuannya memahami konteks kalimat dan ketergantungan urutan kata (*contextual & sequential dependency*). Tidak seperti TF-IDF yang menghilangkan urutan kata dan mencampur sentimen pada kalimat majemuk, arsitektur *Deep Learning* mampu memisahkan sentimen positif dan negatif pada klausa yang berbeda dalam satu ulasan (misal: *"desain bagus tapi bahan panas"*) serta mengenali kedekatan makna kosakata keluhan yang jarang muncul.
 
 ---
 
