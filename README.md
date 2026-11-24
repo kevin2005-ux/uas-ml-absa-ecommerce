@@ -127,24 +127,30 @@ Untuk dataset berupa teks (NLP), arsitektur berbasis *Transformer* (**Multi-Head
 ## 4. DATA UNDERSTANDING  **[L]**
 ### 4.1 Informasi Dataset
 **Sumber Dataset:**  
-[Sebutkan sumber: Hugging Face Datasets – AIbnuHibban/e-commerce-sentiment-bahasa-indonesia]
+[Sebutkan sumber: Kaggle – Shopee Fashion Reviews (Indonesian) - gold_anotasi_manual.csv]
 
 **Deskripsi Dataset:**
-- Jumlah baris (rows): [21.840 baris data ulasan]
-- Jumlah kolom (columns/features): [4 kolom (comment, sentiment, category, rating)]
+- Jumlah baris (rows): [349 baris data ulasan yang telah dianotasi secara manual (gold standard)]
+- Jumlah kolom (columns/features): [10 kolom (row_id, urut, rating, ulasan, gold_kualitas, gold_bahan, gold_ukuran, gold_desain, gold_warna, gold_kenyamanan).]
 - Tipe data: [Text & Tabular]
-- Ukuran dataset: [2.5 MB]
-- Format file: [JSON (atau Parquet hasil konversi otomatis Hugging Face, dapat diekspor ke CSV)]
+- Ukuran dataset: [54.9 kB (untuk file gold_anotasi_manual.csv; total keseluruhan repositori mencapai 2.11 MB yang terdiri dari 4 file).]
+- Format file: [CSV]
 
 ### 4.2 Deskripsi Fitur
 Jelaskan setiap fitur/kolom yang ada dalam dataset.
 **Contoh tabel:**
 | Nama Fitur | Tipe Data | Deskripsi | Contoh Nilai |
 |------------|-----------|-----------|--------------|
-| comment | String (Text) | Teks komentar atau ulasan asli dari pembeli mengenai produk maupun layanan e-commerce (panjang berkisar antara 3 hingga 78 karakter/kata). | "Wah mantap banget nih ditipu! Terima kasih seller 😊" |
-| sentiment | Categorical (String) | Label target klasifikasi polaritas sentimen yang terdiri dari 3 kelas utama (positive, neutral, negative). | negative, positive, neutral |
-| category | Categorical (String) | Kategori atau konteks spesifik dari ulasan yang mencakup 12 nilai unik (termasuk kategori khusus seperti sarcasm atau aspek ulasan tertentu). | sarcasm |
-| rating | Integer (int64) | Skor penilaian bintang yang diberikan oleh pelanggan dengan skala 1 hingga 5. | 1, 4, 5 |
+| row_id | Integer |Nomor indeks/ID unik baris dari dataset induk (rentang 22 hingga 6148). | 22, 55, 65 |
+| urut |  Integer | Nomor urut sampel anotasi manual (1 hingga 350). | 163, 158, 278 |
+| rating | Float | Skor penilaian bintang yang diberikan pembeli pada skala 1.0 hingga 5.0. | 5.0, 4.0, 1.0 |
+| ulasan | String (Text) | Teks ulasan mentah pembeli terkait produk fashion Shopee (mencakup atribut terstruktur bawaan seperti Warna, Desain, Kenyamanan, dan komentar bebas). | "Warna:maroon Konsistensi:kualitas nya ga main2 Kenyamanan:sangat nyaman..." |
+| gold_kualitas | Categorical | Label sentimen hasil anotasi manual untuk aspek kualitas produk (positif, negatif, netral, atau kosong jika aspek tidak dibahas). | positif, negatif, null |
+| gold_bahan | Categorical | Label sentimen hasil anotasi manual untuk aspek bahan/material produk. | positif, negatif, null |
+| gold_ukuran | Categorical | Label sentimen hasil anotasi manual untuk aspek ukuran (sizing) produk. |positif, negatif, null |
+| gold_desain | Categorical | Label sentimen hasil anotasi manual untuk aspek desain/model produk. | positif, negatif, null |
+| gold_warna | Categorical | Label sentimen hasil anotasi manual untuk aspek warna produk. | positif, negatif, null |
+| gold_kenyamanan | Categorical | Label sentimen hasil anotasi manual untuk aspek kenyamanan saat dipakai.| positif, negatif, null |
 
 
 **[Buat tabel deskripsi fitur Anda di sini]**
