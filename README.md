@@ -456,18 +456,21 @@ Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
 - Search space: [n_estimators: [100, 200], learning_rate: [0.05, 0.1], num_leaves: [15, 31], min_child_samples: [3, 5]]
 - Skema validasi: [cv=2 saat search, lalu dievaluasi pada Validation Set (616 sampel)]
 - Best parameters: [num_leaves=15, n_estimators=200, min_child_samples=5, learning_rate=0.1]
-- Skor validasi sebelum vs sesudah tuning:
-[
-Overall Macro F1: 0.7929 → 0.7945
-
-Overall Accuracy: 0.9629 → 0.9619
-
-Weighted F1: 0.9614 → 0.9603]
+- Skor validasi sebelum vs sesudah tuning:[Overall Macro F1: 0.7929 → 0.7945, Overall Accuracy: 0.9629 → 0.9619, Weighted F1: 0.9614 → 0.9603]
 
 #### 6.2.5 Kontrol Overfitting  **[O]**
-[Jelaskan regularisasi/pembatasan kompleksitas yang dipakai, misal: max_depth, min_samples_leaf, early stopping pada boosting]
+[Overfitting ditekan dengan membatasi jumlah daun pohon (num_leaves=15 hasil tuning), mengatur jumlah minimal sampel di tiap daun (min_child_samples=5 hasil tuning / 3 awal), memakai learning_rate yang terkendali (0.1 / 0.05), serta melakukan fit TF-IDF (max_features=10000, ngram_range=(1, 2)) hanya pada data latih (4.926 sampel).]
 
 #### 6.2.6 Hasil Model  **[O → P]**
+Pada Validation Set (616 sampel), perbandingan hasil Sebelum Tuning (waktu latih 70,77 detik) dan Sesudah Tuning (total waktu tuning & evaluasi 955,83 detik) adalah sebagai berikut:
+| Metrik | Sebelum Tuning | Sesudah Tuning |
+| :--- | :---: | :---: |
+| **`Overall Accuracy`** | `0.9629` | `0.9619` |
+| **`Overall Macro F1`** | `0.7929` | `0.7945` |
+| **`Weighted F1`** | `0.9614` | `0.9603` |
+| **`F1 Negatif (0)`** | `0.4739` | `0.4795` |
+| **`F1 Netral (1)`** | `0.9826` | `0.9816` |
+| **`F1 Positif (2)`** | `0.9223` | `0.9224` |
 
 **[Tuliskan hasil pada validation set; evaluasi akhir dijelaskan di Bab 7]**
 
