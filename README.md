@@ -416,23 +416,26 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multioutput import ClassifierChain
 from lightgbm import LGBMClassifier
 
-tfidf_lgb = TfidfVectorizer(ngram_range=(1, 2), max_features=10000)
-X_train_lgb = tfidf_lgb.fit_transform(X_train)
-X_val_lgb = tfidf_lgb.transform(X_val)
+# 1. Ekstraksi fitur TF-IDF unigram-bigram (fit hanya pada training set)
+tfidf_lgb = TfidfVectorizer(ngram_range=(1, 2), max_features=10000) 
+X_train_lgb = tfidf_lgb.fit_transform(X_train) 
+X_val_lgb = tfidf_lgb.transform(X_val) 
 
-base_lgb = LGBMClassifier(
-    n_estimators=200,
-    learning_rate=0.05,
-    min_child_samples=3,
-    class_weight="balanced",
-    random_state=42,
-    n_jobs=-1,
-    verbose=-1,
+# 2. Inisialisasi model dasar LightGBM
+base_lgb = LGBMClassifier( 
+    n_estimators=200, 
+    learning_rate=0.05, 
+    min_child_samples=3, 
+    class_weight="balanced", 
+    random_state=42, 
+    n_jobs=-1, 
+    verbose=-1, 
 )
 
-advanced_model = ClassifierChain(base_lgb, order="random", random_state=42)
-advanced_model.fit(X_train_lgb, Y_train)
-Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
+# 3. Bungkus ke ClassifierChain & latih pada data train
+advanced_model = ClassifierChain(base_lgb, order="random", random_state=42) 
+advanced_model.fit(X_train_lgb, Y_train) 
+Y_val_pred_lgb = advanced_model.predict(X_val_lgb) 
 ```
 
 #### 6.2.4 Optimization: Hyperparameter Tuning  **[O]**
@@ -440,16 +443,17 @@ Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
 **Parameter yang digunakan:**
 ```
 [Tuliskan parameter penting, contoh:]
-- n_estimators: 100
-- max_depth: 10
-- learning_rate: 0.1
-- min_samples_split: 2
+- n_estimators: 200
+- max_depth: 0.05
+- min_child_samples: 3
+- class_weight: 'balanced'
+- random_state: 42
 ```
 
 **Hyperparameter Tuning (WAJIB minimal 1 metode sederhana):**
-- Metode: [Grid Search / Random Search / Bayesian Optimization]
-- Search space: [rentang parameter yang dicoba]
-- Skema validasi: [k-fold CV / validation set]
+- Metode: [Random Search / Grid Search]
+- Search space: [n_estimators: [100, 200, 300], learning_rate: [0.03, 0.05, 0.1], num_leaves: [15, 31], min_child_samples: [3, 5, 10]]
+- Skema validasi: [Cross-Validation / Validation Set (616 sampel)]
 - Best parameters: [...]
 - Skor validasi sebelum vs sesudah tuning: [...]
 
