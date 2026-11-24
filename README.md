@@ -411,6 +411,7 @@ Evaluasi awal pada **Data Validation (616 sampel)** menghasilkan **Overall Accur
 - **Perbandingan dengan baseline:** [Lebih fleksibel dari Logistic Regression unigram independen karena mampu membaca frasa dua kata, pola non-linear, dan hubungan antar-aspek.]
 
 #### 6.2.3 Implementasi (Ringkas)  **[M]**
+```python
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.multioutput import ClassifierChain
 from lightgbm import LGBMClassifier
@@ -432,6 +433,7 @@ base_lgb = LGBMClassifier(
 advanced_model = ClassifierChain(base_lgb, order="random", random_state=42)
 advanced_model.fit(X_train_lgb, Y_train)
 Y_val_pred_lgb = advanced_model.predict(X_val_lgb)
+```
 
 #### 6.2.4 Optimization: Hyperparameter Tuning  **[O]**
 
