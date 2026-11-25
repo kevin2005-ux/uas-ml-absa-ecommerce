@@ -597,6 +597,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
 **Training History Visualization:**
 
 [Exp-1 (lr=2e-5, batch=16): Epoch 1 (Train Loss: 0.3246, Val Loss: 0.1285, Val Acc: 0.9564, Val Macro F1: 0.7696) → Epoch 2 (Train Loss: 0.1026, Val Loss: 0.1076, Val Acc: 0.9659, Val Macro F1: 0.7968) → Epoch 3 (Train Loss: 0.0624, Val Loss: 0.0942, Val Acc: 0.9713, Val Macro F1: 0.8347).]
+
 [Exp-2 (lr=3e-5, batch=32): Epoch 1 (Train Loss: 0.3339, Val Loss: 0.1578, Val Acc: 0.9478, Val Macro F1: 0.7769) → Epoch 2 (Train Loss: 0.1067, Val Loss: 0.1047, Val Acc: 0.9640, Val Macro F1: 0.8233) → Epoch 3 (Train Loss: 0.0635, Val Loss: 0.0966, Val Acc: 0.9697, Val Macro F1: 0.8418).]
 **Contoh visualisasi yang WAJIB:**
 1. **Training & Validation Loss** per epoch
@@ -610,9 +611,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
 
 #### 6.3.7 Model Summary
 ```
-[Paste model.summary() output atau rangkuman arsitektur]
-```
-Total parameters    : 124,455,186
+[Total parameters    : 124,455,186
 Trainable parameters: 124,455,186
 MultiHeadIndoBERT(
   (encoder): BertModel(
@@ -629,8 +628,8 @@ MultiHeadIndoBERT(
   (heads): ModuleList(
     (0-5): 6 x Linear(in_features=768, out_features=3, bias=True)
   )
-)
-
+)]
+```
 ---
 
 ## 7. EVALUATION  **[P]**
