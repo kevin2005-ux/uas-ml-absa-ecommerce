@@ -304,81 +304,93 @@ Berdasarkan hasil eksplorasi distribusi pada ke-6 aspek, data mengalami **ketimp
 
 > Setiap model (6.1, 6.2, 6.3) dijelaskan dalam dua fase: **Model Design [M]** (sub-bagian .1–.3) dan **Optimization [O]** (sub-bagian .4–.6).
 
-### 6.1 Model 1 — Baseline Model
+### 6.1 Model 1 — Baseline Model (Multi-Output Logistic Regression + 5-Fold Stratified CV)
 
 #### 6.1.1 Deskripsi Model  **[M]**
 
-**Nama Model:** Multi-Output Logistic Regression (`MultiOutputClassifier` + `LogisticRegression`)  
+**Nama Model:** Multi-Output Logistic Regression dengan 5-Fold Stratified Cross-Validation (`StratifiedKFold` + `Pipeline` TF-IDF + `MultiOutputClassifier` + `LogisticRegression`)  
 **Teori Singkat:**  
-Logistic Regression merupakan model klasifikasi linear probabilistik yang menghitung kombinasi linear antara vektor fitur masukan (bobot TF-IDF) dengan matriks parameter bobot ($W$), lalu memetakannya ke dalam distribusi probabilitas tiap kelas sentimen (`0: Negatif`, `1: Netral`, `2: Positif`) menggunakan fungsi aktivasi *Softmax* (multinomial). Karena permasalahan memiliki 6 target aspek sekaligus, algoritma dibungkus ke dalam arsitektur `MultiOutputClassifier` yang melatih 6 estimator Logistic Regression independen secara paralel—masing-masing bertanggung jawab memprediksi polaritas sentimen pada satu aspek spesifik.
+Logistic Regression merupakan model klasifikasi linear probabilistik yang menghitung kombinasi linear antara vektor fitur masukan (bobot TF-IDF *unigram* dan *bigram*) dengan matriks parameter bobot ($W$), lalu memetakannya ke dalam distribusi probabilitas tiap kelas sentimen (`0: Negatif`, `1: Netral`, `2: Positif`) menggunakan fungsi aktivasi *Softmax* (multinomial). Karena permasalahan memiliki 6 target aspek sekaligus, algoritma dibungkus ke dalam arsitektur `MultiOutputClassifier` yang melatih 6 estimator Logistic Regression independen secara paralel—masing-masing bertanggung jawab memprediksi polaritas sentimen pada satu aspek spesifik. Seluruh proses pelatihan dan validasi dieksekusi di dalam skema **5-Fold Stratified Cross-Validation** ($K=5$) yang membungkus `TfidfVectorizer` ke dalam `Pipeline` agar pembentukan kosakata fitur dilakukan terpisah pada setiap *fold* tanpa kebocoran data (*data leakage*).
 
 **Alasan Pemilihan:**  
-Model ini dipilih sebagai *baseline* karena arsitekturnya sederhana, sangat efisien secara komputasi (waktu pelatihan hanya **10,53 detik** pada 4.926 sampel latih), bersifat deterministik, serta memiliki interpretabilitas tinggi melalui nilai koefisien bobot kata untuk memvalidasi kata kunci indikator sentimen pada setiap aspek produk fesyen.
+Model ini dipilih sebagai *baseline* murni (*untuned*) karena arsitekturnya sederhana, deterministik, sangat efisien secara komputasi untuk dilatih berulang kali sebanyak $5 \text{ fold} \times 6 \text{ aspek} = 30 \text{ sub-model}$, serta memiliki interpretabilitas tinggi melalui nilai koefisien bobot kata untuk menjadi titik acuan (*benchmark*) objektif sebelum tahap penanganan ketimpangan kelas (*class balancing*) dan *hyperparameter tuning*.
 
 #### 6.1.2 Hypothesis Space & Inductive Bias  **[M]**
 
-- **Model family / arsitektur:** Generalized Linear Model (Model Klasifikasi Linear Multikelas *Multi-Output*).
-- **Hypothesis space:** Himpunan fungsi pemisah berupa *hyperplane* linear dalam ruang vektor fitur TF-IDF berdimensi $d = 5.000$ untuk masing-masing dari 6 aspek target secara terpisah.
+- **Model family / arsitektur:** Generalized Linear Model (Model Klasifikasi Linear Multikelas *Multi-Output* dengan Validasi Silang *5-Fold Stratified*).
+- **Hypothesis space:** Himpunan fungsi pemisah berupa *hyperplane* linear dalam ruang vektor fitur TF-IDF berdimensi $d = 5.000$ (*unigram* + *bigram*) untuk masing-masing dari 6 aspek target secara terpisah pada setiap iterasi *fold*.
 - **Inductive bias / asumsi:** 
-  1. Hubungan antara kemunculan kata (bobot TF-IDF) dan log-odds kelas sentimen bersifat aditif dan linear.
-  2. Fitur kata bersifat independen secara kondisional (*bag-of-words* unigram) tanpa memperhitungkan urutan kata maupun interaksi non-linear antar-frasa.
-  3. Keenam target aspek diprediksi secara independen (*conditional independence* antar-target) tanpa berbagi sinyal prediksi lintas aspek.
-- **Implikasi terhadap dataset Anda:** Asumsi linear ini bekerja dengan baik pada aspek yang memiliki kata kunci eksplisit dan konsisten, seperti `aspek_ukuran` (*"kekecilan"*, *"kebesaran"*, *"pas"*) dan `aspek_bahan` (*"adem"*, *"lembut"*, *"tipis"*). Namun, keterbatasan representasi *unigram* linear membuat model kesulitan memisahkan polaritas pada ulasan majemuk yang mengandung klausa kontras (misal *"desain kece tapi bahan tipis"*), sehingga kata milik aspek lain seperti `tipis` ikut terbaca sebagai indikator negatif pada `aspek_desain`.
+  1. Hubungan antara kemunculan fitur kata/frasa (bobot TF-IDF) dan log-odds kelas sentimen bersifat aditif dan linear.
+  2. Fitur kata dan *bigram* bersifat independen secara kondisional (*bag-of-ngrams*) tanpa memperhitungkan struktur sintaksis kalimat secara keseluruhan.
+  3. Keenam target aspek diprediksi secara independen (*conditional independence* antar-target) tanpa berbagi sinyal prediksi lintas aspek, serta mengikuti distribusi prior alami data latih (tanpa pembobotan kelas).
+- **Implikasi terhadap dataset Anda:** Asumsi linear ini bekerja dengan baik dalam memisahkan kelas mayoritas (`Netral` dan `Positif`) pada aspek dengan kata kunci eksplisit seperti `aspek_bahan` (*"adem"*, *"lembut"*) dan `aspek_warna` (*"sesuai gambar"*). Namun, karena model *baseline* tidak menggunakan pembobotan kelas (*unweighted*) dan dataset mengalami ketimpangan kelas ekstrem pada sentimen `Negatif`, garis batas keputusan (*decision boundary*) cenderung bergeser ke arah kelas mayoritas, sehingga sensitivitas (*recall*) terhadap ulasan `Negatif` pada aspek minoritas seperti `aspek_kualitas` masih rendah.
 
 #### 6.1.3 Implementasi (Ringkas)  **[M]**
+
 ```python
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.pipeline import Pipeline
 
-# 1. Ekstraksi fitur TF-IDF dasar (fit hanya pada training set)
-tfidf_vectorizer = TfidfVectorizer(max_features=5000)
-X_train_tfidf = tfidf_vectorizer.fit_transform(X_train)
-X_val_tfidf = tfidf_vectorizer.transform(X_val)
+# 1. Konfigurasi 5-Fold Stratified Cross-Validation (pada 90% X_dev)
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-# 2. Inisialisasi & pelatihan Multi-Output Logistic Regression
-base_lr = LogisticRegression(
-    class_weight="balanced",
-    C=1.0,
-    max_iter=1000,
-    random_state=42,
-)
-baseline_model = MultiOutputClassifier(base_lr, n_jobs=-1)
-baseline_model.fit(X_train_tfidf, Y_train)
-Y_val_pred = baseline_model.predict(X_val_tfidf)
+# 2. Pipeline Baseline mencegah data leakage (TF-IDF di-fit terpisah per fold)
+baseline_pipe = Pipeline([
+    ("tfidf", TfidfVectorizer(max_features=5000, ngram_range=(1, 2))),
+    (
+        "clf",
+        MultiOutputClassifier(
+            LogisticRegression(max_iter=1000, random_state=42)
+        ),
+    ),
+])
+
+# 3. Pelatihan & evaluasi iteratif per fold, lalu pengujian akhir pada 10% X_test
+for train_idx, val_idx in skf.split(X_dev, Y_dev[minority_col]):
+  baseline_pipe.fit(X_dev.iloc[train_idx], Y_dev.iloc[train_idx])
+  Y_pred_fold = baseline_pipe.predict(X_dev.iloc[val_idx])
+
+# 4. Latih ulang pada seluruh 90% X_dev dan evaluasi akhir pada 10% X_test
+baseline_pipe.fit(X_dev, Y_dev)
+Y_test_pred = baseline_pipe.predict(X_test)
 ```
 
 #### 6.1.4 Optimization: Objective, Hyperparameter & Regularisasi  **[O]**
 
 **Objective/loss yang dioptimalkan:**  
-*Weighted Multinomial Cross-Entropy Loss* (Log-Loss) yang dilengkapi dengan penalti regularisasi **L2 (Ridge)** untuk mengendalikan besaran bobot dan mencegah *overfitting* pada matriks fitur TF-IDF yang berdimensi tinggi dan jarang (*sparse*):
-$$\mathcal{L}(W) = -\frac{1}{N} \sum_{i=1}^{N} \sum_{c=0}^{2} w_c \, y_{i,c} \log(\hat{p}_{i,c}) + \frac{1}{2C} \Vert{}W\Vert{}_2^2$$
-dengan $w_c = \frac{N}{3 \cdot N_c}$ sebagai faktor pembobot kelas otomatis (`class_weight='balanced'`) agar kesalahan klasifikasi pada kelas minoritas (`Negatif`) memperoleh penalti yang seimbang terhadap kelas mayoritas (`Netral`).
+*Standard Multinomial Cross-Entropy Loss* (Log-Loss) tanpa pembobotan kelas (*uniform class weights*) yang dilengkapi dengan penalti regularisasi **L2 (Ridge)** untuk mengendalikan besaran bobot dan mencegah *overfitting* pada matriks fitur TF-IDF yang berdimensi tinggi dan jarang (*sparse*):
+$$\mathcal{L}(W) = -\frac{1}{N} \sum_{i=1}^{N} \sum_{c=0}^{2} y_{i,c} \log(\hat{p}_{i,c}) + \frac{1}{2C} \Vert{}W\Vert{}_2^2$$
+dengan $C = 1.0$ sebagai parameter invers kekuatan regularisasi standar yang dioptimalkan secara terpisah pada setiap *fold* pelatihan.
 
 **Parameter yang digunakan:**
 ```text
-- max_features (TF-IDF)     : 5000 (unigram)
+- validation scheme         : StratifiedKFold (n_splits=5, shuffle=True, random_state=42)
+- max_features (TF-IDF)     : 5000
+- ngram_range (TF-IDF)      : (1, 2) (unigram & bigram)
 - C (inverse regularization): 1.0 (regularisasi L2 standar)
 - penalty                   : 'l2'
 - solver                    : 'lbfgs'
-- class_weight              : 'balanced'
+- class_weight              : None (default / tanpa balancing)
 - max_iter                  : 1000
 - random_state              : 42
 ```
 
 #### 6.1.5 Hasil Awal  **[O → P]**
 
-Evaluasi awal pada **Data Validation (616 sampel)** menghasilkan **Overall Accuracy sebesar 0.9332**, **Weighted F1 sebesar 0.9358**, dan **Overall Macro F1 sebesar 0.7666**:
+Evaluasi *baseline* menggunakan **5-Fold Stratified Cross-Validation** pada **Data Development (90%)** menghasilkan **Overall CV Accuracy sebesar 0.9249** dan **Overall CV Macro F1 sebesar 0.6482 ± 0.0069** (dengan konsistensi skor antar-*fold* di kisaran `0.6421` hingga `0.6615`). Pengujian lanjutan pada **Data Test terkunci (10% *unseen data*)** menghasilkan **Test Accuracy sebesar 0.9248** dan **Test Macro F1 sebesar 0.6530**, yang menunjukkan generalisasi stabil tanpa *overfitting*:
 
-| Aspek | Accuracy | Macro Precision | Macro Recall | Macro F1 | Weighted F1 | F1 Negatif (0) | F1 Netral (1) | F1 Positif (2) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`aspek_kualitas`** | 0.8994 | 0.7309 | 0.8009 | 0.7608 | 0.9032 | 0.5385 | 0.9423 | 0.8018 |
-| **`aspek_bahan`** | 0.9156 | 0.7960 | 0.8377 | 0.8150 | 0.9170 | 0.6286 | 0.9502 | 0.8663 |
-| **`aspek_ukuran`** | 0.9578 | 0.8214 | 0.8716 | 0.8418 | 0.9590 | 0.7059 | 0.9848 | 0.8346 |
-| **`aspek_desain`** | 0.9594 | 0.7142 | 0.7522 | 0.7276 | 0.9617 | 0.2500 | 0.9731 | 0.9598 |
-| **`aspek_warna`** | 0.9464 | 0.7641 | 0.8711 | 0.7973 | 0.9505 | 0.4848 | 0.9728 | 0.9343 |
-| **`aspek_kenyamanan`** | 0.9205 | 0.6549 | 0.6683 | 0.6574 | 0.9233 | 0.1176 | 0.9456 | 0.9091 |
-| **RATA-RATA (OVERALL)** | **0.9332** | **0.7469** | **0.8003** | **0.7666** | **0.9358** | **0.4542** | **0.9615** | **0.8843** |
+| Aspek | CV Macro F1 (Mean ± Std) | CV Accuracy | Test Macro F1 (10%) | Test Accuracy (10%) |
+| :--- | :---: | :---: | :---: | :---: |
+| **`aspek_kualitas`** | 0.5838 ± 0.0278 | 0.9023 | 0.5556 | 0.9042 |
+| **`aspek_bahan`** | 0.7471 ± 0.0216 | 0.9126 | 0.7674 | 0.9205 |
+| **`aspek_ukuran`** | 0.6231 ± 0.0288 | 0.9097 | 0.6518 | 0.9026 |
+| **`aspek_desain`** | 0.6291 ± 0.0041 | 0.9469 | 0.6317 | 0.9497 |
+| **`aspek_warna`** | 0.6860 ± 0.0231 | 0.9485 | 0.6904 | 0.9399 |
+| **`aspek_kenyamanan`** | 0.6204 ± 0.0059 | 0.9295 | 0.6212 | 0.9318 |
+| **RATA-RATA (OVERALL)** | **0.6482 ± 0.0069** | **0.9249** | **0.6530** | **0.9248** |
 
 ---
 
