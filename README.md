@@ -480,26 +480,33 @@ Pada Validation Set (616 sampel), perbandingan hasil Sebelum Tuning (waktu latih
 
 #### 6.3.1 Deskripsi Model  **[M]**
 
-**Nama Model:** [Nama arsitektur, misal: CNN / LSTM / MLP]
+**Nama Model:** [Multi-Head IndoBERT (indobenchmark/indobert-base-p1)]
 
 ** (Centang) Jenis Deep Learning: **
 - [ ] Multilayer Perceptron (MLP) - untuk tabular
 - [ ] Convolutional Neural Network (CNN) - untuk image
 - [ ] Recurrent Neural Network (LSTM/GRU) - untuk sequential/text
 - [ ] Transfer Learning - untuk image
-- [ ] Transformer-based - untuk NLP
+- [x] Transformer-based - untuk NLP
 - [ ] Autoencoder - untuk unsupervised
 - [ ] Neural Collaborative Filtering - untuk recommender
 
 **Alasan Pemilihan:**  
-[Mengapa arsitektur ini cocok untuk dataset Anda?]
+[Model NLP berbasis Transformer (indobert-base-p1) memahami konteks kata berdasarkan perhatian (self-attention) pada seluruh kalimat bahasa Indonesia, sehingga lebih akurat membaca frasa sehari-hari, negasi, maupun sentimen campuran antar-aspek pada ulasan fashion.]
 
 #### 6.3.2 Arsitektur Model, Hypothesis Space & Inductive Bias  **[M]**
 
-**Inductive bias arsitektur:** [misal: CNN → lokalitas & translation invariance; LSTM → ketergantungan sekuensial; MLP → tanpa asumsi struktur]  
-**Hypothesis space:** [kapasitas model: jumlah layer, unit, parameter]
+**Inductive bias arsitektur:** [IndoBERT (12 lapisan Transformer encoder, 12 attention heads, ukuran tersembunyi 768) menangkap hubungan kontekstual antar-token dalam kalimat bahasa Indonesia, lalu dirangkum melalui attention-masked mean pooling dan diproyeksikan ke 6 classification head (Linear(768, 3) per aspek).]  
+**Hypothesis space:** [Ruang representasi deep transformer berlapis yang memetakan urutan token ulasan ke logit 3 kelas (Negatif, Netral, Positif) untuk masing-masing dari 6 aspek.]
 
 **Deskripsi Layer:**
+| Urutan | Layer / Komponen | Konfigurasi / Output Shape | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `1` | **Input Layer** | `(batch_size, 128)` | `input_ids` dan `attention_mask` (`max_len=128`) |
+| `2` | **Backbone Teks** | `BertModel` (`indobert-base-p1`, hidden `768`, 12 layer) | Ekstraksi representasi kontekstual bahasa Indonesia |
+| `3` | **Pooling** | *Attention-masked Mean Pooling* `(batch_size, 768)` | Merangkum vektor token aktif menjadi 1 vektor kalimat |
+| `4` | **Dropout** | `Dropout(p=0.3)` | Mengurangi *overfitting* sebelum lapisan klasifikasi |
+| `5` | **Output Head (6 Aspek)** | `ModuleList` (`6 x Linear(768, 3)`) → `(batch_size, 6, 3)` | Logit 3 kelas sentimen untuk 6 aspek |
 
 [Jelaskan arsitektur secara detail atau buat tabel]
 
@@ -515,95 +522,114 @@ Pada Validation Set (616 sampel), perbandingan hasil Sebelum Tuning (waktu latih
 8. Dropout: 0.5
 9. Dense: 10 units, activation='softmax'
 
-Total parameters: [jumlah]
-Trainable parameters: [jumlah]
+Total parameters: [124,455,186]
+Trainable parameters: [124,455,186]
 ```
 
 #### 6.3.3 Input & Preprocessing Khusus  **[M]**
 
-**Input shape:** [Sebutkan dimensi input]  
+**Input shape:** [(N, 128) untuk input_ids dan attention_mask (diseragamkan dengan padding dan truncation hingga max_len=128).]  
 **Preprocessing khusus untuk DL:**
-- [Sebutkan preprocessing khusus seperti normalisasi, augmentasi, dll.]
+- [Tokenisasi teks menggunakan AutoTokenizer dari indobenchmark/indobert-base-p1 pada 4.926 data latih dan 616 data validasi, dengan label kelas 0, 1, 2 pada 6 aspek.]
 
 #### 6.3.4 Optimization: Konfigurasi Training  **[O]**
 
 **Training Configuration:**
 ```
-- Optimizer: Adam / SGD / RMSprop
-- Learning rate: [nilai]
-- Loss function: [categorical_crossentropy / mse / binary_crossentropy / etc.]
-- Metrics: [accuracy / mae / etc.]
-- Batch size: [nilai]
-- Epochs: [nilai]
-- Validation split: [nilai] atau menggunakan validation set terpisah
-- Callbacks: [EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, etc.]
-- Regularisasi: [Dropout / L2 / BatchNorm / augmentasi]
+- Optimizer: AdamW (weight_decay=0.01)
+- Learning rate: [2e-5 (Exp-1) dan 3e-5 (Exp-2) dengan linear warmup (10% langkah) + linear decay]
+- Loss function: [Rata-rata Cross-Entropy Loss (nn.CrossEntropyLoss()) di atas 6 aspek]
+- Metrics: [accuracy, macro_f1]
+- Batch size: [16 (Exp-1) dan 32 (Exp-2)]
+- Epochs: [3]
+- Validation split: Validation Set (616 sampel)
+- Callbacks: [Penyimpanan best checkpoint berdasarkan Val Macro F1 tertinggi]
+- Regularisasi: [Dropout(p=0.3), weight_decay=0.01, dan gradient clipping (max_norm=1.0)]
 ```
 
 **Eksperimen optimasi (minimal 2 konfigurasi dibandingkan):**
 
 | Eksperimen | Learning Rate | Batch Size | Regularisasi | Val Loss | Val Metric |
 |------------|---------------|------------|--------------|----------|------------|
-| Exp-1 | [ ] | [ ] | [ ] | [ ] | [ ] |
-| Exp-2 | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Exp-1 | [ 2e-5 ] | [16] | [Dropout(0.3), weight_decay=0.01, grad clip 1.0] | [0.0942] | [Macro F1: 0.8347 | Acc: 0.9713] |
+| Exp-2 | [ 3e-5 ] | [32] | [Dropout(0.3), weight_decay=0.01, grad clip 1.0] | [0.0966] | [Macro F1: 0.8418 | Acc: 0.9697] |
 
 #### 6.3.5 Implementasi (Ringkas)  **[M + O]**
 
 **Framework:** TensorFlow/Keras / PyTorch
 ```python
-# Contoh kode TensorFlow/Keras
-import tensorflow as tf
-from tensorflow import keras
+import torch
+import torch.nn as nn
+from transformers import AutoModel
 
-model_dl = keras.Sequential([
-    keras.layers.Dense(128, activation='relu', input_shape=(input_dim,)),
-    keras.layers.Dropout(0.3),
-    keras.layers.Dense(64, activation='relu'),
-    keras.layers.Dropout(0.3),
-    keras.layers.Dense(num_classes, activation='softmax')
-])
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model_dl.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
+# 1. Definisi Multi-Head IndoBERT untuk 6 aspek x 3 kelas sentimen
+class MultiHeadIndoBERT(nn.Module):
+    def __init__(self, model_name="indobenchmark/indobert-base-p1", num_aspects=6, num_classes=3, dropout_rate=0.3):
+        super().__init__()
+        self.encoder = AutoModel.from_pretrained(model_name)
+        hidden_size = self.encoder.config.hidden_size
+        self.dropout = nn.Dropout(dropout_rate)
+        self.heads = nn.ModuleList([nn.Linear(hidden_size, num_classes) for _ in range(num_aspects)])
 
-history = model_dl.fit(
-    X_train, y_train,
-    validation_split=0.2,
-    epochs=50,
-    batch_size=32,
-    callbacks=[early_stopping]
-)
+    def forward(self, input_ids, attention_mask):
+        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+        mask = attention_mask.unsqueeze(-1).expand(outputs.last_hidden_state.size()).float()
+        pooled = torch.sum(outputs.last_hidden_state * mask, dim=1) / torch.clamp(mask.sum(dim=1), min=1e-9)
+        dropped = self.dropout(pooled)
+        return torch.stack([head(dropped) for head in self.heads], dim=1)
+
+# 2. Pindahkan ke GPU/CPU & latih per epoch dengan AdamW + CrossEntropyLoss
+model = MultiHeadIndoBERT().to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
 ```
 
 #### 6.3.6 Training Process & Diagnosis Optimasi  **[O]**
 
 **Training Time:**  
-[Sebutkan waktu training total, misal: 15 menit]
+[347,59 detik (Exp-1, 3 epoch) dan 313,91 detik (Exp-2, 3 epoch)]
 
 **Computational Resource:**  
-[CPU / GPU, platform: Local / Google Colab / Kaggle]
+[GPU (Tesla T4), Google Colab]
 
 **Training History Visualization:**
 
-[Insert plot loss dan accuracy/metric per epoch]
-
+[Exp-1 (lr=2e-5, batch=16): Epoch 1 (Train Loss: 0.3246, Val Loss: 0.1285, Val Acc: 0.9564, Val Macro F1: 0.7696) → Epoch 2 (Train Loss: 0.1026, Val Loss: 0.1076, Val Acc: 0.9659, Val Macro F1: 0.7968) → Epoch 3 (Train Loss: 0.0624, Val Loss: 0.0942, Val Acc: 0.9713, Val Macro F1: 0.8347).]
+[Exp-2 (lr=3e-5, batch=32): Epoch 1 (Train Loss: 0.3339, Val Loss: 0.1578, Val Acc: 0.9478, Val Macro F1: 0.7769) → Epoch 2 (Train Loss: 0.1067, Val Loss: 0.1047, Val Acc: 0.9640, Val Macro F1: 0.8233) → Epoch 3 (Train Loss: 0.0635, Val Loss: 0.0966, Val Acc: 0.9697, Val Macro F1: 0.8418).]
 **Contoh visualisasi yang WAJIB:**
 1. **Training & Validation Loss** per epoch
 2. **Training & Validation Accuracy/Metric** per epoch
 
 **Analisis Training:**
-- Apakah model mengalami overfitting? [Ya/Tidak, jelaskan]
-- Apakah model sudah converge? [Ya/Tidak, jelaskan]
-- Apakah perlu lebih banyak epoch? [Ya/Tidak, jelaskan]
-- Apakah learning rate sesuai (loss stabil/osilasi/lambat)? [Jelaskan]
+- Apakah model mengalami overfitting? [Tidak terlihat overfitting yang parah hingga epoch ke-3 karena Val Loss terus turun dari epoch 1 ke epoch 3 (0.1285 → 0.0942 pada Exp-1 dan 0.1578 → 0.0966 pada Exp-2) seiring Val Macro F1 yang terus meningkat.]
+- Apakah model sudah converge? [Mendekati konvergen pada epoch ke-3, meskipun kenaikan Val Macro F1 masih aktif hingga epoch terakhir sehingga penambahan epoch sedikit (dengan pemantauan validation loss) masih berpotensi memberi perbaikan kecil.]
+- Apakah perlu lebih banyak epoch? [Opsional/tidak harus banyak—3 epoch sudah memberi lonjakan performa besar (0.8347 dan 0.8418), dan jika ditambah epoch sebaiknya dipantau agar Val Loss tidak mulai naik.]
+- Apakah learning rate sesuai (loss stabil/osilasi/lambat)? [Sesuai—penurunan loss berjalan mulus dan stabil tanpa osilasi ekstrem pada 2e-5 (Exp-1) maupun 3e-5 (Exp-2).]
 
 #### 6.3.7 Model Summary
 ```
 [Paste model.summary() output atau rangkuman arsitektur]
 ```
+Total parameters    : 124,455,186
+Trainable parameters: 124,455,186
+MultiHeadIndoBERT(
+  (encoder): BertModel(
+    (embeddings): BertEmbeddings(
+      (word_embeddings): Embedding(50000, 768, padding_idx=0)
+      (position_embeddings): Embedding(512, 768)
+      (token_type_embeddings): Embedding(2, 768)
+      (LayerNorm): LayerNorm((768,), eps=1e-12, elementwise_affine=True, bias=True)
+      (dropout): Dropout(p=0.1, inplace=False)
+    )
+    ...
+  )
+  (dropout): Dropout(p=0.3, inplace=False)
+  (heads): ModuleList(
+    (0-5): 6 x Linear(in_features=768, out_features=3, bias=True)
+  )
+)
 
 ---
 
